@@ -1,13 +1,13 @@
 /
-├── README.md                      (Root) Main Project Description
+├── README.md                      (Root) Project Executive Summary
 ├── LICENSE                        (Root) MIT Open Source License
-├── contracts/                     (Folder) Smart Contract Reference Model
+├── contracts/                     (Folder) Technical Reference Model
 │   └── PiRC101Vault.sol           (Finalized Solidity Code)
-├── simulator/                     (Folder) Dynamic Simulation Environment
-│   ├── stochastic_abm_simulator.py (Finalized Stochastic Python Code)
-│   ├── index.html                (Finalized Interactive HTML Visualizer)
-│   └── pirc101_simulation.png    (Placeholder image for your chart)
+├── simulator/                     (Folder) Stochastic ABM Environment
+│   ├── stochastic_abm_simulator.py (Python Stress Tester with Agents)
+│   ├── index.html                (HTML Interactive Visualizer)
+│   └── pirc101_simulation_chart.png (Placeholder image for your chart)
 └── docs/                          (Folder) Normative Specifications
-    ├── PiRC101_Whitepaper.md     (Normative Specification, A/B Tracks)
+    ├── PiRC101_Whitepaper.md     (Normative Specification)
     └── dev-guide/                 (Folder) Integration Guides
-        └── integration.md         (Integration Guidelines, D/E Tracks)
+        └── integration.md         (Integration Guidelines)
