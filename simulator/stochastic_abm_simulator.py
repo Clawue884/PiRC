@@ -1,5 +1,8 @@
+import math
 import random
+import matplotlib.pyplot as plt
 
+# --- Agent Class: Modeling Rational Participant Behavior ---
 class Agent:
     def __init__(self, behavior_type):
         self.type = behavior_type
@@ -13,39 +16,49 @@ class Agent:
                 return "MINT_MAX"
             return "HOLD"
             
-        # 2. Defensive Exiter: Panics if liquidity drops or Phi crashes
+        # 2. Defensive Exiter: Panics if liquidity trends downward or Phi crashes
         elif self.type == "Defensive":
             if liquidity_trend == "DOWN" or phi < 0.4:
                 return "EXIT_ALL"
             return "HOLD"
             
-        # 3. Steady Merchant: Mints a little bit every day regardless of conditions
+        # 3. Steady Merchant: Mints predictable amounts regardless of conditions
         elif self.type == "Steady":
             return "MINT_PARTIAL"
 
-class PiRC101_Stochastic_Sim:
-    def __init__(self, num_agents=100):
+# --- PiRC-101 Stochastic ABM Simulator Class ---
+class PiRC101_Visual_Sim:
+    def __init__(self, num_agents=200):
+        # Genesis State (Epoch 0)
         self.epoch = 0
         self.pi_price = 0.314
-        self.liquidity = 10_000_000
+        self.liquidity = 10_000_000  # $10M Market Depth
         self.ref_supply = 0
+        
+        # Protocol Constants
         self.qwf = 10_000_000
         self.gamma = 1.5
         self.exit_cap = 0.001
         
-        # Create a heterogeneous population of agents
+        # Heterogeneous population
         self.agents = [Agent(random.choice(["Opportunistic", "Defensive", "Steady"])) for _ in range(num_agents)]
+        
+        # Historical trackers for plotting
+        self.history = {'epoch': [], 'phi': [], 'liquidity': [], 'ref_supply': []}
 
     def get_phi(self):
         if self.ref_supply == 0: return 1.0
-        ratio = (self.liquidity * self.exit_cap) / (self.ref_supply / self.qwf)
+        available_exit = self.liquidity * self.exit_cap
+        # Ratio of available exit door (USD) to total REF debt normalized (Supply/QWF)
+        ratio = available_exit / (self.ref_supply / self.qwf)
         return 1.0 if ratio >= self.gamma else (ratio / self.gamma) ** 2
 
     def run_epoch(self):
         self.epoch += 1
         
-        # Stochastic Market Movement (Random Walk)
-        market_shift = random.uniform(-0.15, 0.10) # Heavy downward bias for stress testing
+        # Severe multi-epoch bear market simulation (Stochastic Shock)
+        # Apply random market walk biased heavily towards a severe crash.
+        market_shift = random.uniform(-0.15, 0.05) 
         self.pi_price *= (1 + market_shift)
         self.liquidity *= (1 + market_shift)
         liquidity_trend = "DOWN" if market_shift < 0 else "UP"
@@ -54,7 +67,7 @@ class PiRC101_Stochastic_Sim:
         daily_exit_pool = self.liquidity * self.exit_cap
         exit_requests = 0
 
-        # Agents React to the Market
+        # Run individual Agent reactions
         for agent in self.agents:
             action = agent.decide_action(phi, liquidity_trend)
             
@@ -73,15 +86,48 @@ class PiRC101_Stochastic_Sim:
             elif action == "EXIT_ALL" and agent.ref_balance > 0:
                 exit_requests += agent.ref_balance
 
-        # Process Exits (Throttled by the Exit Cap)
+        # Process Exit Queue (Throttled by Exit Cap)
         exit_cleared = min(exit_requests, daily_exit_pool * self.qwf)
         self.ref_supply -= exit_cleared
+        
+        if self.ref_supply < 0: self.ref_supply = 0
 
-        print(f"Epoch {self.epoch:02d} | Price: ${self.pi_price:.3f} | Liq: ${self.liquidity:,.0f} | Phi: {phi:.4f} | Exits Pending: {(exit_requests - exit_cleared):,.0f} REF")
+        # Collect data for plotting
+        self.history['epoch'].append(self.epoch)
+        self.history['phi'].append(phi)
+        self.history['liquidity'].append(self.liquidity)
+        self.history['ref_supply'].append(self.ref_supply)
 
-# Run a 30-Day Stress Test
-sim = PiRC101_Stochastic_Sim(num_agents=50)
-print("--- Starting 30-Day Stochastic Agent-Based Stress Test ---")
-for _ in range(30):
+# --- Execute Simulation (90-Day Stochastic Stress Test) ---
+sim = PiRC101_Visual_Sim(num_agents=300)
+for _ in range(90):
     sim.run_epoch()
 
+# --- Visualization Script using Matplotlib ---
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+
+# Plot 1: System Health Indicator (Phi)
+ax1.plot(sim.history['epoch'], sim.history['phi'], color='red', linewidth=2, label='System Solvency (Phi)')
+ax1.axhline(y=1.0, color='green', linestyle='--', label='Optimal Expansion (1.0)')
+ax1.set_title('PiRC-101 Guardrail: Reflexive Phi Throttling Under Panicked Agent-Based Behavior')
+ax1.set_ylabel('Phi Value (State Machine Guard)')
+ax1.legend(loc='lower left')
+ax1.grid(True)
+
+# Plot 2: Macroeconomic Trends (Liquidity vs Supply)
+ax2.plot(sim.history['epoch'], sim.history['liquidity'], color='blue', label='External AMM Liquidity (USD)')
+ax2.set_ylabel('Liquidity Depth (USD)', color='blue')
+ax2.tick_params(axis='y', labelcolor='blue')
+
+ax3 = ax2.twinx()
+ax3.plot(sim.history['epoch'], sim.history['ref_supply'], color='purple', linestyle='-', label='Internal REF Supply (Credit)')
+ax3.set_ylabel('Credit Supply (REF)', color='purple')
+ax3.tick_params(axis='y', labelcolor='purple')
+
+ax2.set_title('Protocol Convergence: Liquidity Depletion vs Deterministic Supply Cap')
+ax2.set_xlabel('Epoch (Days)')
+ax2.grid(True)
+
+plt.tight_layout()
+plt.savefig('simulator/pirc101_simulation_chart.png')
+print("Simulation complete. Chart saved in 'simulator/' folder.")
