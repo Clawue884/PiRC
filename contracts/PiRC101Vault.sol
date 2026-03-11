@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 /**
  * @title PiRC-101 Sovereign Vault (Hardened Reference Model)
  * @author EslaM-X Protocol Architect
- * @notice Formalizes 10M:1 Credit Expansion with Hardened Exit Throttling Logic (Deterministic Spec).
+ * @notice Formalizes 10M:1 Credit Expansion with Hardened Exit Throttling Logic and Unit Consistency (Deterministic Spec).
  */
 contract PiRC101Vault {
     // --- Constants ---
@@ -35,23 +35,24 @@ contract PiRC101Vault {
     function depositAndMint(uint256 _amount, uint8 _class) external {
         require(_amount > 0, "Amount must be greater than zero");
         
-        // --- Mock Oracle Data (Decentralized Aggregation Required for Production) ---
+        // --- Placeholders for Oracle Integration (Decentralized Aggregation Required for Production) ---
+        // TODO: integrate decentralized oracle feed
         uint256 piPrice = 314000; // $0.314 (scaled to 6 decimals)
         uint256 currentLiquidity = 10_000_000 * 1e6; // $10M Market Depth (scaled to 6 decimals)
 
-        // --- Calculate Phi (The Throttling Coefficient) ---
+        // --- Compute Phi first for the solvency guardrail ---
         uint256 phi = calculatePhi(currentLiquidity, systemState.totalREF);
         
         // --- Insolvency Guardrail Check ---
         require(phi > 0, "Minting Paused: External Solvency Guardrail Activated.");
 
-        // --- Expansion Logic ---
+        // --- Expansion Logic (Pi -> USD -> 10M REF) ---
         uint256 capturedValue = (_amount * piPrice) / 1e6;
         
-        // Provenance Logic: Direct snapshot wallet usage receives higher weight (Placeholder 1.0 vs 10M)
-        uint256 wcf = 1e18; // 1.0 default
+        // --- Provenance Logic: Single wcf declaration to fix redeclaration error ---
+        uint256 wcf = 1e18; // 1.0 default (External Pi weight)
         if (isSnapshotWallet[msg.sender]) {
-            wcf = 1e25; // Placeholder for high mined Pi weight
+            wcf = 1e25; // Placeholder for high mined Pi weight (e.g., Wm = 1.0)
         }
 
         uint256 mintAmount = (capturedValue * QWF_MAX * phi * wcf) / 1e36;
@@ -61,6 +62,7 @@ contract PiRC101Vault {
         systemState.totalREF += mintAmount;
         userBalances[msg.sender][_class] += mintAmount;
 
+        // --- Emit Hardened Event ---
         emit CreditExpanded(msg.sender, _amount, mintAmount, phi);
     }
 
@@ -74,18 +76,20 @@ contract PiRC101Vault {
         return (ratio * ratio) / 2.25e18; // Quadratic Throttling (ratio^2 / Gamma^2)
     }
 
-    // --- 🚨 NEW: HARDENED EXIT THROTTLING LOGIC 🚨 ---
+    // --- Hardened Exit Throttling Logic ---
 
     /**
      * @notice Conceptual Function for Withdrawal/Exit. Demonstrates the exit throttling mechanism.
+     * @dev Hardened: Fixes unit consistency issue by comparing USD to USD.
      * @param _refAmount REF Credits user wants to liquidate.
      * @param _class Target utility class.
-     * @return piOut The actual Pi value (scaled Conceptual USD Value) to be conceptualized as withdrawn.
+     * @return piOut The actual Pi value (scaled Conceptual USD Value) conceptually withdrawn.
      */
     function conceptualizeWithdrawal(uint256 _refAmount, uint8 _class) external returns (uint256 piOut) {
         require(userBalances[msg.sender][_class] >= _refAmount, "Insufficient REF balance");
 
-        // --- Mock Oracle Data ---
+        // --- Placeholders for Oracle Integration ---
+        // TODO: integrate decentralized oracle feed
         uint256 piPrice = 314000; // $0.314 (scaled to 6 decimals)
         uint256 currentLiquidity = 10_000_000 * 1e6; // $10M Market Depth
 
@@ -96,6 +100,33 @@ contract PiRC101Vault {
             systemState.dailyExitAmount = 0; // Reset daily counter
         }
 
+        // Available Exit Door (USD Depth * EXIT_CAP_PPM / 1e6)
+        uint256 availableDailyDoorUsd = (currentLiquidity * EXIT_CAP_PPM) / 1e6;
+        uint256 remainingDailyUsdCap = availableDailyDoorUsd > systemState.dailyExitAmount ? availableDailyDoorUsd - systemState.dailyExitAmount : 0;
+
+        // --- Conceptual Conversion and Throttling ---
+        // 1. Conceptualize REF USD Value: Simplified view
+        uint256 refUsdConceptualValue = (_refAmount * piPrice) / (QWF_MAX * 1e6);
+
+        // 2. Apply Throttling based on Remaining Daily USD Cap
+        // --- Fix: Unit consistency - comparing refUsdConceptualValue (USD) to remainingDailyUsdCap (USD) ---
+        uint256 allowedRefUsdValue = refUsdConceptualValue <= remainingDailyUsdCap ? refUsdConceptualValue : remainingDailyUsdCap;
+        piOut = (allowedRefUsdValue * 1e6) / piPrice; // Conceptualized Pi out
+
+        // 3. Final Invariant Check
+        require(piOut > 0, "Daily Exit Throttled: Zero Conceptual Withdrawal Allowed.");
+
+        // Update State
+        userBalances[msg.sender][_class] -= _refAmount;
+        systemState.totalREF -= _refAmount; // REF is conceptually burned
+        
+        systemState.totalReserves -= piOut; // Solvency drain from Reserves conceptualized
+        systemState.dailyExitAmount += allowedRefUsdValue;
+
+        // --- Emit Hardened Event ---
+        emit CreditThrottledExit(msg.sender, _refAmount, piOut, remainingDailyUsdCap);
+    }
+}
         // Available Exit Door (USD Depth * EXIT_CAP_PPM / 1e6)
         uint256 availableDailyDoorUsd = (currentLiquidity * EXIT_CAP_PPM) / 1e6;
         uint256 remainingDailyUsdCap = availableDailyDoorUsd > systemState.dailyExitAmount ? availableDailyDoorUsd - systemState.dailyExitAmount : 0;
