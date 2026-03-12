@@ -118,3 +118,42 @@ Untuk penjelasan lebih lengkap mengenai tiap modul dan interaksi kontrak, lihat 
 [PiRC Architecture Overview](diagrams/pirc_architecture_overview.md)
 
 ---
+
+┌─────────────┐
+                 │  PiRC Token │
+                 │ (pi_token)  │
+                 └─────┬──────┘
+                       │
+                       ▼
+               ┌───────────────┐
+               │ Treasury Vault│
+               │ (treasury_vault) │
+               └─────┬─────────┘
+        ┌────────────┼─────────────┐
+        ▼            ▼             ▼
+ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+ │Liquidity    │ │DEX Executor │ │Reward Engine│
+ │Controller   │ │(dex_executor)│ │(reward_engine)│
+ └─────┬───────┘ └─────┬───────┘ └─────┬───────┘
+       │               │               │
+       └───────┬───────┴───────┬───────┘
+               ▼               ▼
+           Bootstrapper & GitHub Actions
+           (bootstrap + automation)
+
+
+       # PiRC Architecture Overview
+
+Klik modul untuk melihat kontrak dan dokumentasi:
+
+- [PiRC Token](contracts/pi_token.rs)
+- [Treasury Vault](contracts/treasury_vault.rs)
+- [Governance Contract](contracts/governance.rs)
+- [Liquidity Controller](contracts/liquidity_controller.rs)
+- [DEX Executor](contracts/dex_executor_a.rs)
+- [Reward Engine](contracts/reward_engine.rs)
+- [Bootstrapper & Automation](bootstrap.rs + automation/)
+
+![PiRC Architecture Diagram](diagrams/a_flowchart_diagram_illustrates_the_pirc_ecosystem.png)
+
+**Ekosistem Loop Ekonomi:**    
