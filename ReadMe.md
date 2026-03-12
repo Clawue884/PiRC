@@ -91,6 +91,12 @@ Automated simulation runs using GitHub Actions.
 
 ---
 
+## PiRC Architecture
+![PiRC Architecture](diagrams/pirc_architecture_overview.png)
+Lihat juga dokumen [Architecture Overview](diagrams/pirc_architecture_overview.md)
+
+
+
 # License
 
 MIT License
