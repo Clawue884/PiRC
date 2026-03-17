@@ -10,11 +10,6 @@ See [PiRC1: Pi Ecosystem Token Design](./PiRC1/ReadMe.md)
 PiRC Extended 🚀
 Adaptive Crypto-Economic & Trust Infrastructure
 Sybil-resistant, utility-driven decentralized economy framework
-�
-�
-�⁠�
-�⁠�
-⚠️ Independent research & engineering initiative. Not affiliated with official Pi Network development.
 🔹 Core Innovations
 Adaptive Economic Engine (PAEE): Dynamic token distribution based on utility & network growth.
 Utility-Based Token Economy: Contribution-based rewards, human–AI hybrid model.
